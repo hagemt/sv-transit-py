@@ -15,7 +15,7 @@ Put the file in your `PATH` for easy customization. For BART:
 
 ```bash
 #!/usr/bin/env bash
-exec "${BART_CLI:-/path/to/bart.py}" "${1:-${BART_END:-ALL}}"
+exec "${BART_CLI:-/path/to/bart.py}" "$@"
 ```
 
 The best location on macOS is `/usr/local/bin` or `/opt/...` maybe.
@@ -48,3 +48,7 @@ Caltrain #133 North Local       in 167 min at Hayward Park
 ```
 
 Set `CT_HOME=belmont` and/or `CT_WORK=hayward-park` as necessary.
+
+## Screenshots
+
+![image](https://user-images.githubusercontent.com/593274/160048897-14a79534-3f13-47a3-a270-ba449522a42a.png)
