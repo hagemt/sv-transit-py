@@ -11,7 +11,9 @@ clean:
 .PHONY: clean
 
 lint: sane
+	poetry run bandit -r modes
 	poetry run black $(DIRS)
+	poetry run mypy $(DIRS)
 	poetry run pylint $(DIRS)
 .PHONY: lint
 

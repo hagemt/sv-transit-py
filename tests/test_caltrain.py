@@ -1,18 +1,15 @@
 """test caltrain.py
 """
-from modes import caltrain, __version__
+from modes import caltrain
 
-# pylint: disable=missing-function-docstring
-
-
-def test_version():
-    assert __version__ == "0.1.0"
+# pylint: disable=missing-function-docstring, protected-access
 
 
 def test_bearing():
-    sdb: caltrain.StationDB = caltrain.KNOWN_STATIONS
-    args = ("belmont", "hayward-park", "millbrae")
-    home, work, other = sdb.find_stations(*args)
-    assert sdb.bearing(home.alias, work.alias) == "North"
-    assert sdb.bearing(work.alias, home.alias) == "South"
-    assert sdb.bearing(other.alias, other.alias) == "Equal"
+    sdb: caltrain.StationDB = caltrain.StationDB(data=caltrain.ZONED_STATIONS)
+    home, work, other = sdb.find_stations("belmont", "hayward-park", "millbrae")
+    alias, bearing = lambda s: s.alias, sdb._bearing
+    assert bearing(alias(home), alias(work)) == "North"
+    assert bearing(alias(work), alias(home)) == "South"
+    assert bearing(alias(other), alias(other)) == "Equal"
+    assert bearing("home", "work") == "Error"

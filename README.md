@@ -43,7 +43,7 @@ Caltrain #131 North Local       in 109 min at Hayward Park
 Caltrain #133 North Local       in 167 min at Hayward Park
 
 ### advanced operation:
-# env CT_FMT=json CT_END=work ct | jq
+# ct rtt sf22 --fmt=json | jq
 ## ... or: pipe to grep, sort, etc.
 ```
 
