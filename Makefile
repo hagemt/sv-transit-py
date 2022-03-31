@@ -1,4 +1,5 @@
 DIRS := modes tests
+TEST := bart.cli caltrain.cli
 
 auto:
 	@echo '--- This project uses poetry and Python v3.10+'
@@ -26,6 +27,6 @@ sane:
 
 test: sane
 	poetry install
-	poetry run pytest
+	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -rs
 	make lint
 .PHONY: test

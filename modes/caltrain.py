@@ -18,15 +18,18 @@ brew install python && pip3 install --user beautifulsoup4 click requests
 """
 from collections import defaultdict, namedtuple, OrderedDict
 from dataclasses import asdict, dataclass
+from contextlib import contextmanager
 from datetime import datetime
 
 import json
 import os
 import re
+import warnings
 
+# external dependencies:
 from bs4 import BeautifulSoup
-import click  # CLI tools
-import requests  # HTTP
+import click
+import requests
 
 # static data
 # order: most North (Zone 1) to South
@@ -47,8 +50,17 @@ ZONED_STATIONS = (
     (2, "Redwood City"),
     (3, "Menlo Park"),
     (3, "Palo Alto"),
-    (3, "Stanford"),
-    (3, "California Avenue"),
+    # (3, "Stanford"),
+    # ? No mobile status for Stanford ??
+    # Old page: https://www.caltrain.com/stations/stanfordstation.html
+    #
+    # 2022-03-30: switched base URLs
+    # - https://www.caltrain.com/stations.html
+    # - to: https://www.caltrain.com/schedules/realtime/stations.html
+    # (former has /stations/ path, plus $station.html vs. $station-mobile.html)
+    # ! One station name in mobile version differs from full station name:
+    # (3, "California Avenue"),
+    (3, "California Ave"),
     (3, "San Antonio"),
     (3, "Mountain View"),
     (3, "Sunnyvale"),
@@ -126,7 +138,7 @@ class StationDB(OrderedDict):
             self._named[key] = k
             self[index] = k
 
-    def _bearing(self, one: str, two: str) -> str:
+    def bearing(self, one: str, two: str) -> str:
         """returns "North" or "South" for any two distinct stations
         -- returns "Error" in the case of unknown stations
         -- returns "Equal" when both are the same station
@@ -150,10 +162,10 @@ class StationDB(OrderedDict):
         return dict(self._zones[num])
 
     @staticmethod
-    def build_url(base, raw, prefix="CALT: ", suffix=".html") -> str:
+    def build_url(base, raw, prefix="CALT: ", suffix="-mobile.html") -> str:
         """URL to Caltrain real-time station page"""
         page = raw.replace(prefix, "").replace(" ", "") + suffix
-        return "/".join([base, "stations", page]).lower()
+        return f"{base}/schedules/realtime/stations/{page}".lower()
 
     @staticmethod
     def fetch_soup(url):
@@ -230,17 +242,30 @@ def _dump(station, url, human=None):
     def parse_trains(soup):
         table = soup.find("table", class_="ipf-caltrain-table-trains")
         if table is None:
-            return {}
+            div = soup.find("div", "ipf-caltrain-stationselector")  # yuck!
+            text = div.findAll(text=True, recursive=False) if div else []
+            errs = filter(
+                lambda s: s and not s.startswith("<"),  # no HTML
+                (s.strip() for s in text),  # error on station page
+            )
+            err = "; ".join(errs)[:50] or "did not report a specific error message"
+            return {}, "Caltrain page: " + err
         head = table.find("tr", class_="ipf-st-ip-trains-table-dir-tr")
         dirs = map(lambda div: div.text.title()[:5], head.find_all("div"))
         both = table.find_all("table", class_="ipf-st-ip-trains-subtable")
         find_text = lambda tr: tuple(td.text for td in tr.find_all("td"))
         find_rows = lambda t: t.find_all("tr", class_="ipf-st-ip-trains-subtable-tr")
-        return dict(zip(dirs, ([find_text(tr) for tr in find_rows(t)] for t in both)))
+        data = dict(zip(dirs, ([find_text(tr) for tr in find_rows(t)] for t in both)))
         # data dict maps SOUTHBOUND or NORTHBOUND to "trains" list (ea. tuple of strings)
+        return data, ""
 
     def yield_trains(soup, now=_msnow()):
-        data = parse_trains(soup)
+        data, err = parse_trains(soup)
+        if len(data) == 0 or err:
+            summary = err or "Caltrain real-time reporting error"
+            yield RealTime(what=summary, when=now, where=station)
+            warnings.warn(f"Open in browser: {url}")
+            return
         for bearing, rows in data.items():
             for row in rows:
                 num = row[0]  # e.g. 122
@@ -273,6 +298,18 @@ def _dump(station, url, human=None):
 _CLI_DEFAULTS = dict(default_map=dict(rtt={"fmt": "text"}))
 
 
+@contextmanager
+def warnings_appended():
+    """prints all warnings at the end of output
+
+    e.g. with append_warnings(): logic()
+    """
+    with warnings.catch_warnings(record=True) as group:
+        yield  # runs the CLI logic
+        for warning in group:
+            click.secho(warning.message, fg="yellow")
+
+
 @click.group(chain=False, context_settings=_CLI_DEFAULTS, invoke_without_command=True)
 @click.pass_context
 def cli(ctx, **kwargs):
@@ -283,7 +320,8 @@ def cli(ctx, **kwargs):
     if ctx.invoked_subcommand is None:
         stations = opts.get("CT_END", "both")  # home and work
         is_human = opts.get("CT_FMT", "text") != "json"
-        _dump_named(*stations.split(","), human=is_human)
+        with warnings_appended():
+            _dump_named(*stations.split(","), human=is_human)
 
 
 @cli.command(context_settings={"ignore_unknown_options": True})
@@ -298,9 +336,11 @@ def rtt(all_stations=None, fmt=None, stations=""):
         args = (t[1] for t in ZONED_STATIONS)
         known_stations = StationDB(data=ZONED_STATIONS)
         for station in known_stations.find_stations(*args):
-            _dump(station.alias, station.url, human=human)
+            with warnings_appended():
+                _dump(station.alias, station.url, human=human)
     else:
-        _dump_named(*named, human=human)
+        with warnings_appended():
+            _dump_named(*named, human=human)
 
 
 def main(*args, **kwargs):
