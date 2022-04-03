@@ -106,8 +106,14 @@ class RealTime:
     where: str  # station alias/key
 
     def __repr__(self):
-        ddt = str(int((self.when - _msnow()) / 60000))
-        return f"{self.what} in {ddt:>3s} min at {self.where}"
+        ddt = str(self.relative_minutes())
+        loc = self.where.replace('22Nd', '22nd')
+        return f"{self.what} in {ddt:>3s} min at {loc}"
+
+    def relative_minutes(self, now=None) -> int:
+        """returns number of minutes between 'now' and departure time"""
+        ddt = self.when - (now or _msnow())
+        return int(ddt / 60000)
 
 
 class StationDB(OrderedDict):
@@ -282,9 +288,9 @@ def _dump(station, url, human=None):
     def to_output(train):
         if human is True:
             return repr(train)
-        data = asdict(train)  # mutable copy (hack)
-        when = int((data["when"] - _msnow()) / 60000)
-        data["when"] = f"{str(when):>3s} min"
+        data = asdict(train)  # hacked on properties:
+        data["when_minutes"] = train.relative_minutes()
+        data["where"] = train.where.replace('22Nd', '22nd')
         return json.dumps(data, separators=(",", ":"))
 
     # main logic: fetch, parse, dump
