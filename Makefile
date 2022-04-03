@@ -1,5 +1,5 @@
 ARGS :=
-DIRS := modes tests
+DIRS := modes scripts tests
 TEST := bart.cli caltrain.cli
 
 auto:

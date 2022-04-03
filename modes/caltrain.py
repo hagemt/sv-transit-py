@@ -24,6 +24,7 @@ from datetime import datetime
 import json
 import os
 import re
+import sys
 import warnings
 
 # external dependencies:
@@ -319,7 +320,7 @@ def warnings_appended():
     with warnings.catch_warnings(record=True) as group:
         yield  # runs the CLI logic
         for warning in group:
-            click.secho(warning.message, fg="yellow")
+            click.secho(warning.message, fg="yellow", file=sys.stderr)
 
 
 @click.group(chain=False, context_settings=_CLI_DEFAULTS, invoke_without_command=True)

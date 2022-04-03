@@ -2,7 +2,7 @@
 
 We may add other transit modes in future. (your contributions = welcome)
 
-See [screenshots](#screenshots) below to understand the use cases.
+See [screenshots](#screenshots) below to understand potential use cases.
 
 ## Setup
 
@@ -62,5 +62,7 @@ Caltrain #133 North Local       in 167 min at Hayward Park
 Set `CALT_HOME=belmont` and/or `CALT_WORK=hayward-park` as necessary.
 
 ### Screenshots
+
+re: Caltrain, see examples above vs. all BART departures:
 
 ![image](https://user-images.githubusercontent.com/593274/160048897-14a79534-3f13-47a3-a270-ba449522a42a.png)
