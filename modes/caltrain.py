@@ -105,10 +105,16 @@ class RealTime:
     when: int  # UTC milliseconds since UNIX epoch
     where: str  # station alias/key
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ddt = str(self.relative_minutes())
-        loc = self.where.replace('22Nd', '22nd')
+        loc = self.calt_station
         return f"{self.what} in {ddt:>3s} min at {loc}"
+
+    @property
+    def calt_station(self) -> str:
+        """returns a fully-qualified name for RT departure location"""
+        # note: StationDB's build_url does a similar text modification
+        return f"CALT: {self.where.replace('22Nd', '22nd')} Station"
 
     def relative_minutes(self, now=None) -> int:
         """returns number of minutes between 'now' and departure time"""
@@ -194,7 +200,7 @@ def _dump_named(*args, base=_URL, human=None):
     Strings in args are fully-qualified Caltrain stations like "san-francisco" or an alias like "sf"
     """
     _hub = "san-francisco,millbrae,hillsdale,redwood-city,palo-alto,mountain-view,san-jose-diridon"
-    hubs = os.getenv("CALT_HUB", _hub)  # Baby Bullet stations (fastest type of Caltrain)
+    hubs = os.getenv("CALT_HUB", _hub)  # Baby Bullet stations (fastest Caltrain)
     mine = os.getenv("CALT_MINE", "san-francisco,belmont,hayward-park,palo-alto")
     home = _env_key("CALT_HOME", "Belmont")  # closest station
     work = _env_key("CALT_WORK", "Hayward Park")  # WeWork
@@ -290,7 +296,7 @@ def _dump(station, url, human=None):
             return repr(train)
         data = asdict(train)  # hacked on properties:
         data["when_minutes"] = train.relative_minutes()
-        data["where"] = train.where.replace('22Nd', '22nd')
+        data["where"] = train.calt_station
         return json.dumps(data, separators=(",", ":"))
 
     # main logic: fetch, parse, dump
