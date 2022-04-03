@@ -2,13 +2,15 @@
 
 We may add other transit modes in future. (your contributions = welcome)
 
+See [screenshots](#screenshots) below to understand the use cases.
+
 ## Setup
 
-In an executable script named `ct` for Caltrain:
+In an executable script named `ct` or `calt` for Caltrain:
 
 ```bash
 #!/usr/bin/env bash
-exec "${CT:-/path/to/caltrain.py}" "$@"
+exec "${CALT:-/path/to/caltrain.py}" "$@"
 ```
 
 Put the file in your `PATH` for easy customization. For BART:
@@ -20,7 +22,17 @@ exec "${BART_CLI:-/path/to/bart.py}" "$@"
 
 The best location on macOS is `/usr/local/bin` or `/opt/...` maybe.
 
-### Usage
+Another option is to clone this repo and run the `make` targets for either.
+
+### Releases
+
+If someone actually files a request, I may publish dists of this repo.
+
+The overhead of releases beyond GitHub is a lot for one author/maintainer.
+
+In future: publish to PyPi, maybe Docker images, AUR (open Issue/PRs, please)
+
+## Usage
 
 NOTE: BART line colors may appear differently in your terminal than mine!
 
@@ -43,12 +55,12 @@ Caltrain #131 North Local       in 109 min at Hayward Park
 Caltrain #133 North Local       in 167 min at Hayward Park
 
 ### advanced operation:
-# ct rtt sf22 --fmt=json | jq
+# calt rtt sf22 --fmt=json | jq
 ## ... or: pipe to grep, sort, etc.
 ```
 
-Set `CT_HOME=belmont` and/or `CT_WORK=hayward-park` as necessary.
+Set `CALT_HOME=belmont` and/or `CALT_WORK=hayward-park` as necessary.
 
-## Screenshots
+### Screenshots
 
 ![image](https://user-images.githubusercontent.com/593274/160048897-14a79534-3f13-47a3-a270-ba449522a42a.png)

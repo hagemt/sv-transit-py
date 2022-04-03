@@ -6,11 +6,11 @@ brew install python && pip3 install --user beautifulsoup4 click requests
 # then draft an alias or crontab for your particular use of this script
 
 -- USAGE: ./caltrain.py --help
-- CT_END=both # vs. "home" or "work" for example (train list filter)
-- CT_FMT=text # vs. json output, TODO: consider using CLI args instead
-- CT_HUB='...' # major stations, e.g. SF, Millbrae, RWC, PA, MV, SJ Diridon
-- CT_MINE ... # stations, incl. CT_HOME and CT_WORK aliases
-- CT_URL=https://www.caltrain.com # useful for debug
+- CALT_END=both # vs. "home" or "work" for example (train list filter)
+- CALT_FMT=text # vs. json output, TODO: consider using CLI args instead
+- CALT_HUB='...' # major stations, e.g. SF, Millbrae, RWC, PA, MV, SJ Diridon
+- CALT_MINE ... # stations, incl. CALT_HOME and CALT_WORK aliases
+- CALT_URL=https://www.caltrain.com # useful for debug
 ^ (default values for environment variables, which you can override)
 
 # Author: hagemt (2021)
@@ -76,7 +76,7 @@ ZONED_STATIONS = (
     (6, "Gilroy"),
 )
 
-_URL = os.getenv("CT_URL", "https://www.caltrain.com")
+_URL = os.getenv("CALT_URL", "https://www.caltrain.com")
 _msnow = lambda: int(datetime.now().timestamp() * 1000)
 
 # stations are title case, map to FQ name (starts with CALT:) plus aliases
@@ -188,10 +188,10 @@ def _dump_named(*args, base=_URL, human=None):
     Strings in args are fully-qualified Caltrain stations like "san-francisco" or an alias like "sf"
     """
     _hub = "san-francisco,millbrae,hillsdale,redwood-city,palo-alto,mountain-view,san-jose-diridon"
-    hubs = os.getenv("CT_HUB", _hub)  # Baby Bullet stations (fastest type of Caltrain)
-    mine = os.getenv("CT_MINE", "san-francisco,belmont,hayward-park,palo-alto")
-    home = _env_key("CT_HOME", "Belmont")  # closest station
-    work = _env_key("CT_WORK", "Hayward Park")  # WeWork
+    hubs = os.getenv("CALT_HUB", _hub)  # Baby Bullet stations (fastest type of Caltrain)
+    mine = os.getenv("CALT_MINE", "san-francisco,belmont,hayward-park,palo-alto")
+    home = _env_key("CALT_HOME", "Belmont")  # closest station
+    work = _env_key("CALT_WORK", "Hayward Park")  # WeWork
 
     def build_aliases(data):
         _all = (t[1] for t in data)
@@ -318,16 +318,16 @@ def cli(ctx, **kwargs):
     opts.update(os.environ)
     opts.update(kwargs)
     if ctx.invoked_subcommand is None:
-        stations = opts.get("CT_END", "both")  # home and work
-        is_human = opts.get("CT_FMT", "text") != "json"
+        stations = opts.get("CALT_END", "both")  # home and work
+        is_human = opts.get("CALT_FMT", "text") != "json"
         with warnings_appended():
             _dump_named(*stations.split(","), human=is_human)
 
 
 @cli.command(context_settings={"ignore_unknown_options": True})
-@click.argument("stations", envvar="CT_END", nargs=-1)  # CSVs
+@click.argument("stations", envvar="CALT_END", nargs=-1)  # CSVs
 @click.option("--all-stations", default=True, is_flag=True)
-@click.option("--fmt", envvar="CT_FMT")
+@click.option("--fmt", envvar="CALT_FMT")
 def rtt(all_stations=None, fmt=None, stations=""):
     """Lists departures from all/any particular station(s)"""
     human = fmt != "json"  # use jq for @csv and @tsv conversion

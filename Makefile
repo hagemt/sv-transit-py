@@ -1,3 +1,4 @@
+ARGS :=
 DIRS := modes tests
 TEST := bart.cli caltrain.cli
 
@@ -6,6 +7,14 @@ auto:
 	@echo '* Try: `make test` (will install dependencies in venv)'
 	@echo '(please open an issue or pull request if necessary)'
 .PHONY: auto
+
+bart:
+	@poetry run python modes/bart.py $(ARGS) $(BART_ARGS)
+.PHONY: bart
+
+calt:
+	@poetry run python modes/caltrain.py $(ARGS) $(CALT_ARGS)
+.PHONY: calt
 
 clean:
 	@git clean -dix
