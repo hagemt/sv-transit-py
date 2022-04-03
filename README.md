@@ -4,6 +4,8 @@ We may add other transit modes in future. (your contributions = welcome)
 
 See [screenshots](#screenshots) below to understand potential use cases.
 
+All supported OS/Python variants are listed in `.github/workflows/...`
+
 ## Setup
 
 In an executable script named `ct` or `calt` for Caltrain:
