@@ -1,5 +1,7 @@
 # Python for BART and Caltrain
 
+[![Tests](https://github.com/hagemt/sv-transit-py/actions/workflows/tests.yml/badge.svg)](https://github.com/hagemt/sv-transit-py/actions/workflows/tests.yml)
+
 We may add other transit modes in future. (your contributions = welcome)
 
 See [screenshots](#screenshots) below to understand potential use cases.
