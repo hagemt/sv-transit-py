@@ -4,9 +4,12 @@
 - License: MIT
 """
 from collections import namedtuple
+import datetime as DT
 import json
 import os
 import sys
+import typing as T
+import warnings
 
 # USAGE: env BART_END=sfia BART_FMT=json ./bart.py | jq .summary -r | sort
 import click
@@ -24,10 +27,8 @@ def _dump_named(*args, human=None):
     (note: the abbreviation ALL is valid for every station)
     """
 
-    def fetch_json(orig, key=_KEY, base=_URL):
+    def fetch_json(url: str) -> T.Optional[dict]:
         try:
-            # http://api.bart.gov/docs/etd/etd.aspx
-            url = f"{base}/api/etd.aspx?cmd=etd&json=y&key={key}&orig={orig}"
             res = requests.get(
                 url,
                 headers={
@@ -35,18 +36,24 @@ def _dump_named(*args, human=None):
                 },
             )
             res.raise_for_status()
-            return res.json().get("root", {})
-        except requests.exceptions.HTTPError:
-            sys.exit(1)
+            return res.json().get("root")
+        except ValueError as err:
+            warnings.warn(f"HTTP GET {url} bad JSON; err={err}")
+            return None
+        except requests.exceptions.HTTPError as err:
+            warnings.warn(f"HTTP GET {url} failed; err={err}")
+            return None
 
-    def safe_color(line, html=None):
+    def safe_color(line: str, html=None) -> T.Union[str, T.Tuple[int, ...]]:
         if html is None:
             colors = {"ORANGE": "bright_red"}  # vs. ANSI colors
             return colors[line] if line in colors else line.lower()
         chunks = [html[1:3], html[3:5], html[5:7]]  # RRGGBB
         return tuple(int(s, 16) for s in chunks)
 
-    def yield_trains(abbr, root):
+    def yield_trains(abbr: str, root: T.Optional[dict]):
+        if root is None:
+            return
         for station in root.get("station", []):
             for etd in station.get("etd", []):
                 for estimate in etd.get("estimate", {}):
@@ -81,11 +88,28 @@ def _dump_named(*args, human=None):
                         )
 
     for abbr in map(lambda a: a.upper(), args):
-        for train in yield_trains(abbr, fetch_json(abbr)):
+        trains = []
+        # http://api.bart.gov/docs/etd/etd.aspx
+        url = f"{_URL}/api/etd.aspx?cmd=etd&json=y&key={_KEY}&orig={abbr}"
+        for train in yield_trains(abbr, fetch_json(url)):
+            trains.append(train)
             if human is True:
                 click.secho(train.summary, fg=train.color)  # stable output?
             else:
                 click.echo(json.dumps(train._asdict(), separators=(",", ":")))
+        if not trains:
+            now = DT.datetime.now()
+            end = (now + DT.timedelta(days=1)).replace(hour=5, minute=0)
+            ddt = int((end - now).total_seconds() / 60 % (24 * 60))  # minutes
+            warnings.warn(
+                "\n".join(
+                    [
+                        "Either you are offline, or BART isn't running; check URL:",
+                        url,
+                        f"NOTE: weekday trains start at 5am, which is in {ddt} min",
+                    ]
+                )
+            )
 
 
 _CLI_DEFAULTS = dict(
@@ -106,11 +130,15 @@ def cli(ctx):
     """Scrapes real-time information regarding BART"""
     if ctx.invoked_subcommand is None:
         defaults = _CLI_DEFAULTS.get("default_map", {})
-        settings = defaults.get(None, {})  # Click
+        settings = defaults.get(None, {})
         is_human = settings.get("is_human")
-        # http://api.bart.gov/docs/overview/abbrev.aspx
         stations = settings.get("stations")
-        _dump_named(*stations, human=is_human)
+        with warnings.catch_warnings(record=True) as group:
+            # http://api.bart.gov/docs/overview/abbrev.aspx
+            _dump_named(*stations, human=is_human)
+            for warning in group:
+                msg = f"Warning: {warning.message}"
+                click.secho(msg, fg="yellow", file=sys.stderr)
 
 
 def main(*args, **kwargs):
