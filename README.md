@@ -7,7 +7,7 @@ We may add other transit modes in future. (your contributions = welcome)
 See [screenshots](#screenshots) below to understand potential use cases.
 
 All supported OS/Python variants should be exercised through
-(https://github.com/hagemt/sv-transit-py/actions)[GitHub Actions]
+[https://github.com/hagemt/sv-transit-py/actions](GitHub Actions)
 
 ## Setup
 
