@@ -109,12 +109,11 @@ def cli(ctx):
 
 
 @cli.command(context_settings=dict(ignore_unknown_options=True))
-@click.option("--stations", nargs=0, required=True)
 @click.argument("stations", nargs=-1)
 @click.option("--json", is_flag=True)
-def fof(stations, use_json):
-    """Three door trains only"""
-    _dump_named(*stations, human=not use_json)
+def fof(stations, **options):
+    """find Fleet of the Future (three door) trains"""
+    _dump_named(*stations, human=not options.get("json"))
 
 
 def main(*args, **kwargs):
