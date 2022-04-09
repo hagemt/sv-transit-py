@@ -20,23 +20,27 @@ clean:
 	@git clean -dix
 .PHONY: clean
 
+install:
+	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
+	poetry install
+.PHONY: install
+
 lint: sane
 	poetry run bandit -r modes
 	poetry run black $(DIRS)
 	poetry run mypy $(DIRS)
-	poetry run pylint $(DIRS)
+	-poetry run pylint $(DIRS)
 .PHONY: lint
 
 HTML ?= tests/test_caltrain_html.py
 html:
-	poetry env list \
-			&& poetry run python ./$(HTML) \
-			&& poetry run pytest $(HTML)
+	@poetry env list \
+			&& poetry run python $(HTML) \
+			&& poetry run pytest $(HTML) \
+			&& cat tests/caltrain.html
 .PHONY: html
 
-sane:
-	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
-	poetry install
+sane: install
 	poetry show --outdated
 	#[ -x "$(shell command -v snyk)" ] && snyk # yarn global add snyk # optional
 .PHONY: sane
