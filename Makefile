@@ -33,11 +33,11 @@ lint: sane
 .PHONY: lint
 
 HTML ?= tests/test_caltrain_html.py
-html:
-	@poetry env list \
-			&& poetry run python $(HTML) \
-			&& poetry run pytest $(HTML) \
-			&& cat tests/caltrain.html
+html: install
+	@poetry run python $(HTML)
+	@poetry run pytest $(HTML)
+	@env "TRANSIT_TESTS=$(TEST)" poetry run \
+		pytest -ra --cov=modes --cov-report=html tests/
 .PHONY: html
 
 sane: install
@@ -54,8 +54,7 @@ stop:
 	docker-compose down
 .PHONY: stop
 
-test: sane
-	poetry install
-	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -rs
+test: install
+	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -ra --cov=modes tests/
 	make lint
 .PHONY: test
