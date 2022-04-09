@@ -20,18 +20,6 @@ clean:
 	@git clean -dix
 .PHONY: clean
 
-install:
-	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
-	poetry install
-.PHONY: install
-
-lint: sane
-	poetry run bandit -r modes
-	poetry run black $(DIRS)
-	poetry run mypy $(DIRS)
-	-poetry run pylint $(DIRS)
-.PHONY: lint
-
 HTML ?= tests/test_caltrain_html.py
 html: install
 	@poetry run python $(HTML)
@@ -39,6 +27,22 @@ html: install
 	@env "TRANSIT_TESTS=$(TEST)" poetry run \
 		pytest -ra --cov=modes --cov-report=html tests/
 .PHONY: html
+
+install:
+	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
+	poetry install
+.PHONY: install
+
+lights:
+	@poetry run python -m lights
+.PHONY: lights
+
+lint: sane
+	poetry run bandit -r modes
+	poetry run black $(DIRS)
+	poetry run mypy $(DIRS)
+	-poetry run pylint $(DIRS)
+.PHONY: lint
 
 sane: install
 	poetry show --outdated
