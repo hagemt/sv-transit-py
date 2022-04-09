@@ -35,6 +35,11 @@ import requests
 # static data
 # order: most North (Zone 1) to South
 ZONED_STATIONS = (
+    #
+    # New bugs: neither the mobile version nor other options to GET HTML work
+    # 2022-04-08: switch to POST /main.html
+    # this is what the homepage does, and it's kind of jank, but w/e it works
+    #
     (1, "San Francisco"),
     (1, "22nd Street"),
     (1, "Bayshore"),

@@ -27,6 +27,13 @@ lint: sane
 	poetry run pylint $(DIRS)
 .PHONY: lint
 
+HTML ?= tests/test_caltrain_html.py
+html:
+	poetry env list \
+			&& poetry run python ./$(HTML) \
+			&& poetry run pytest $(HTML)
+.PHONY: html
+
 sane:
 	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
 	poetry install
