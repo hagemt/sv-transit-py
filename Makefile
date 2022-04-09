@@ -20,16 +20,31 @@ clean:
 	@git clean -dix
 .PHONY: clean
 
+HTML ?= tests/test_caltrain_html.py
+html: install
+	@poetry run python $(HTML)
+	@poetry run pytest $(HTML)
+	@env "TRANSIT_TESTS=$(TEST)" poetry run \
+		pytest -ra --cov=modes --cov-report=html tests/
+.PHONY: html
+
+install:
+	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
+	poetry install
+.PHONY: install
+
+lights:
+	@poetry run python -m lights
+.PHONY: lights
+
 lint: sane
 	poetry run bandit -r modes
 	poetry run black $(DIRS)
 	poetry run mypy $(DIRS)
-	poetry run pylint $(DIRS)
+	-poetry run pylint $(DIRS)
 .PHONY: lint
 
-sane:
-	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
-	poetry install
+sane: install
 	poetry show --outdated
 	#[ -x "$(shell command -v snyk)" ] && snyk # yarn global add snyk # optional
 .PHONY: sane
@@ -43,8 +58,7 @@ stop:
 	docker-compose down
 .PHONY: stop
 
-test: sane
-	poetry install
-	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -rs
+test: install
+	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -ra --cov=modes tests/
 	make lint
 .PHONY: test
