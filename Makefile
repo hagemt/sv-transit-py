@@ -33,7 +33,6 @@ sane:
 .PHONY: sane
 
 test: sane
-	poetry install
 	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -rs
 	make lint
 .PHONY: test
