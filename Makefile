@@ -32,15 +32,6 @@ sane:
 	poetry show --outdated
 .PHONY: sane
 
-services:
-	make -C ui node_modules
-	docker-compose up -d
-.PHONY: services
-
-stop:
-	docker-compose down
-.PHONY: stop
-
 test: sane
 	poetry install
 	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -rs
