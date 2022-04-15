@@ -3,7 +3,7 @@ DIRS := modes scripts tests
 TEST := bart.cli caltrain.cli
 
 auto:
-	@echo '--- This project uses poetry and Python v3.10+'
+	@echo '--- This project uses poetry and modern Python 3+ tooling'
 	@echo '* Try: `make test` (will install dependencies in venv)'
 	@echo '(please open an issue or pull request if necessary)'
 .PHONY: auto
@@ -28,10 +28,8 @@ lint: sane
 .PHONY: lint
 
 sane:
-	@#[ -x "$(shell command -v poetry)" ] ## brew install poetry ### nodejs yarn
 	poetry install
 	poetry show --outdated
-	#[ -x "$(shell command -v snyk)" ] && snyk # yarn global add snyk # optional
 .PHONY: sane
 
 services:
