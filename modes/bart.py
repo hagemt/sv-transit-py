@@ -3,17 +3,18 @@
 - Author: hagemt (2021)
 - License: MIT
 """
-from collections import namedtuple
+# USAGE: env BART_END=sfia BART_FMT=json ./bart.py | jq .summary -r | sort
 import datetime as DT
 import json
 import os
 import sys
 import typing as T
 import warnings
+from collections import namedtuple
 
-# USAGE: env BART_END=sfia BART_FMT=json ./bart.py | jq .summary -r | sort
+# bs4 not required because BART provides JSON (like Caltrain, as of 2023)
 import click
-import requests
+import requests as HTTP
 
 _KEY = os.getenv("BART_KEY", "MW9S-E7SL-26DU-VV8V")  ## legacy API # nosec
 _URL = os.getenv("BART_URL", "https://api.bart.gov")  # you can replace these
@@ -29,18 +30,13 @@ def _dump_named(*args, human=None):
 
     def fetch_json(url: str) -> T.Optional[dict]:
         try:
-            res = requests.get(
-                url,
-                headers={
-                    "User-Agent": "@hagemt/bart.py",
-                },
-            )
+            headers = {
+                "User-Agent": "@hagemt/bart.py",
+            }
+            res = HTTP.get(url, headers=headers, timeout=10)
             res.raise_for_status()
             return res.json().get("root")
-        except ValueError as err:
-            warnings.warn(f"HTTP GET {url} bad JSON; err={err}")
-            return None
-        except requests.exceptions.HTTPError as err:
+        except (HTTP.exceptions.HTTPError, ValueError) as err:
             warnings.warn(f"HTTP GET {url} failed; err={err}")
             return None
 
@@ -135,7 +131,7 @@ def cli(ctx):
         stations = settings.get("stations")
         with warnings.catch_warnings(record=True) as group:
             # http://api.bart.gov/docs/overview/abbrev.aspx
-            _dump_named(*stations, human=is_human)
+            _dump_named(*stations, human=is_human)  # type: ignore
             for warning in group:
                 msg = f"Warning: {warning.message}"
                 click.secho(msg, fg="yellow", file=sys.stderr)

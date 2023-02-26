@@ -16,21 +16,20 @@ brew install python && pip3 install --user beautifulsoup4 click requests
 # Author: hagemt (2021)
 # License: MIT
 """
-from collections import defaultdict, namedtuple, OrderedDict
-from dataclasses import asdict, dataclass
-from contextlib import contextmanager
-from datetime import datetime
-
 import json
 import os
 import re
 import sys
+import typing as T
 import warnings
+from collections import defaultdict, namedtuple
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass
+from datetime import datetime
 
-# external dependencies:
-from bs4 import BeautifulSoup
 import click
-import requests
+import requests as HTTP
+from bs4 import BeautifulSoup
 
 # static data
 # order: most North (Zone 1) to South
@@ -123,7 +122,7 @@ class RealTime:
         return int(ddt / 60000)
 
 
-class StationDB(OrderedDict):
+class StationDB(dict):
     """Useful for understanding the relationship between stations
 
     Given (zone, alias) info, deduces a key-value pair (station, URL)
@@ -133,15 +132,14 @@ class StationDB(OrderedDict):
     Also, functions are provided to fetch real-time Caltrain data.
     """
 
-    def __init__(self, base=_URL, data=None):
-        super().__init__()
-        _data = OrderedDict(
-            {} if data is None else (alias, zone) for zone, alias in data
-        )
-        self._zones = defaultdict(OrderedDict)
-        self._named = OrderedDict()
-        for index, alias in enumerate(_data, start=1):
-            zone = _data[alias]
+    def __init__(self, base=_URL, data=None) -> None:
+        raw: T.Dict[str, int] = {}  # alias -> zone #
+        for zone, alias in data or []:
+            raw[alias] = zone
+        self._zones = defaultdict(dict)  # type: ignore
+        self._named: T.Dict[str, KnownStation] = {}
+        for index, alias in enumerate(raw, start=1):
+            zone = raw[alias]
             key = _env_key("", alias)
             url = StationDB.build_url(base, key)
             k = KnownStation(index, alias, zone, key, url)
@@ -184,13 +182,11 @@ class StationDB(OrderedDict):
     def fetch_soup(url):
         """HTTP GET and parse HTML"""
         ie9 = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)"
-        res = requests.get(
-            url,
-            headers={
-                "Accept": "text/html,application/xhtml+xml,application/xml",
-                "User-Agent": ie9,
-            },
-        )
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml",
+            "User-Agent": ie9,
+        }
+        res = HTTP.get(url, headers=headers, timeout=10)
         res.raise_for_status()
         return BeautifulSoup(res.text, "html.parser")
 
@@ -247,6 +243,7 @@ def _dump_named(*args, base=_URL, human=None):
 
 def _dump(station, url, human=None):
     """prints Caltrains to stdout using click.echo"""
+
     # The "hard parts" are broken out into helper functions.
     # * obtain BeautifulSoup via HTTP URL using StationDB
     # * parse raw data into north/south bound train list
@@ -320,14 +317,14 @@ def warnings_appended():
     with warnings.catch_warnings(record=True) as group:
         yield  # runs the CLI logic
         for warning in group:
-            click.secho(warning.message, fg="yellow", file=sys.stderr)
+            click.secho(str(warning.message), fg="yellow", file=sys.stderr)
 
 
 @click.group(chain=False, context_settings=_CLI_DEFAULTS, invoke_without_command=True)
 @click.pass_context
 def cli(ctx, **kwargs):
     """Scrapes real-time information regarding Caltrain(s)"""
-    opts = {}
+    opts: T.Dict[str, str] = {}
     opts.update(os.environ)
     opts.update(kwargs)
     if ctx.invoked_subcommand is None:

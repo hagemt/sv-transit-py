@@ -5,22 +5,29 @@ description = "CLI for BART and Caltrain, etc."
 authors = ["Tor E Hagemann <hagemt@users.noreply.github.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = ">=3.8.0,<4.0"
 beautifulsoup4 = "^4.10.0"
 click = "^8.0.3"
 requests = "^2.26.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 bandit = "^1.7.4"
-black = "^22.1.0"
-mypy = "^0.942"
-pylint = "^2.13.0"
+black = "^23.1.0"
+mypy = "^1.0.1"
+pylint = "^2.16.2"
 pytest = "^7.1.1"
 types-beautifulsoup4 = "^4.10.16"
 types-click = "^7.1.8"
 types-requests = "^2.27.14"
-pytest-cov = "^3.0.0"
+pytest-cov = "^4.0.0"
+isort = "^5.12.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = "unnecessary-lambda-assignment,use-dict-literal"

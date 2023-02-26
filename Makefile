@@ -12,27 +12,28 @@ bart:
 	@poetry run python modes/bart.py $(ARGS) $(BART_ARGS)
 .PHONY: bart
 
-calt:
-	@poetry run python modes/caltrain.py $(ARGS) $(CALT_ARGS)
-.PHONY: calt
+check: sane
+	make fmt
+	poetry run bandit -r modes
+	poetry run mypy --check-untyped-defs $(DIRS)
+	poetry run pylint $(DIRS)
+	make test
+.PHONY: check
 
 clean:
 	@git clean -dix
 .PHONY: clean
 
-lint: sane
-	poetry run bandit -r modes
+fmt:
 	poetry run black $(DIRS)
-	poetry run mypy $(DIRS)
-	poetry run pylint $(DIRS)
-.PHONY: lint
+	poetry run isort $(DIRS)
+.PHONY: fmt
 
 sane:
 	poetry install
 	poetry show --outdated
 .PHONY: sane
 
-test: sane
+test:
 	env "TRANSIT_TESTS=$(TEST)" poetry run pytest -rs
-	make lint
 .PHONY: test

@@ -1,8 +1,10 @@
 """test bart.py
 """
 import os
-from click.testing import CliRunner
+
 import pytest
+from click.testing import CliRunner
+
 from modes import bart
 
 SKIP_CLI = "bart.cli" not in os.getenv("TRANSIT_TESTS", "")

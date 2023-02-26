@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """find 3-door trains
+
+a.k.a. Fleet of the Future (202X)
 """
-from collections import namedtuple
 import datetime as DT
 import json
 import os
@@ -9,34 +10,43 @@ import re
 import sys
 import typing as T
 import warnings
+from collections import namedtuple
 
-from bs4 import BeautifulSoup
 import click
-import requests
+import requests as HTTP
+from bs4 import BeautifulSoup
 
+# this API key isn't a secret; BART publishes it
+BART_KEY = os.getenv("BART_KEY", "MW9S-E7SL-26DU-VV8V")
 BASE_URL = os.getenv("BART_URL", "https://www.bart.gov")
 
-API_BASE = BASE_URL.replace("www", "api")  # /api/etd.aspx
-BART_KEY = os.getenv("BART_KEY", "MW9S-E7SL-26DU-VV8V")
-
+# every station in the system has a name and four-letter abbreviation
+API_BASE = BASE_URL.replace("www", "api")  # /api/xyz.aspx
 STNS_URL = f"{API_BASE}/api/stn.aspx?cmd=stns&json=y&key={BART_KEY}"
-STN_ROOT = requests.get(STNS_URL).json().get("root", {}).get("stations", {})
-STATIONS: T.Dict[str, str] = {
-    stn.get("abbr"): stn.get("name") for stn in STN_ROOT.get("station", [])
-}
 
 
-def _dump_named(*stations, human=False):
+def _station_names(url=STNS_URL) -> T.Iterable[str]:
+    try:
+        res = HTTP.get(url, timeout=10)
+        res.raise_for_status()
+        root = res.json().get("root", {})
+        stns = root.get("stations", {}).get("station", [])
+        return [stn.get("abbr", "") for stn in stns if "abbr" in stn]
+    except (HTTP.HTTPError, ValueError) as err:
+        raise ValueError("failed to discover station info") from err
+
+
+def _dump_named(*stations, human=False) -> None:
     """yields only Fleet of the Future trains"""
     ETD = namedtuple("ETD", "summary abbr etd on to")
     now = DT.datetime.utcnow()
 
-    def _fetch(url: str) -> requests.models.Response:
-        res = requests.get(url)
+    def _fetch(url: str) -> HTTP.models.Response:
+        res = HTTP.get(url, timeout=10)
         res.raise_for_status()
         return res
 
-    def _parse(abbr: str, soup: BeautifulSoup):
+    def _parse(abbr: str, soup: BeautifulSoup) -> T.Generator[ETD, None, None]:
         for img in soup.find_all("img", class_="rtd-fof-icon"):
             etd = img.parent.parent  # holds single estimate
             _li = etd.parent.parent  # holds train destinations
@@ -57,66 +67,64 @@ def _dump_named(*stations, human=False):
             summary = f"at {abbr}#{platform} to {location:20s} in {subject}"
             yield ETD(summary, abbr, etd=when, on=platform, to=location)
 
-    def _dumps(fotf: ETD) -> str:
+    def _dumps(etd: ETD) -> str:
         if human:
-            return fotf.summary
-        data = dict(summary=fotf[0], on=fotf[1], to=fotf[2])
+            return etd.summary
+        data = dict(summary=etd[0], on=etd[1], to=etd[2])
         return json.dumps(data, separators=(",", ":"))
 
-    # the /schedules/eta?stn={stn} page uses JS to poll real-time HTML
-    for stn in stations:
-        url = f"{BASE_URL}/bart/api/rte/{stn}/1/1"
-        res = _fetch(url)
-        soup = BeautifulSoup(res.text, "html.parser")
-        found = []
-        for train in _parse(stn, soup):
-            click.echo(_dumps(train))
-            found.append(train)
-        if not found:
-            warnings.warn(f"At {stn}? URL: {BASE_URL}/schedules/eta?stn={stn}")
+    # the /schedules/eta?stn={stn} page uses JS to load "real-time ETD" HTML
+    with warnings.catch_warnings(record=True) as group:
+        for stn in stations:
+            res = _fetch(f"{BASE_URL}/bart/api/rte/{stn}/1/1")
+            soup = BeautifulSoup(res.text, features="html.parser")
+            found: T.List[ETD] = []
+            for etd in _parse(stn, soup):
+                click.echo(_dumps(etd))
+                found.append(etd)
+            if not found:
+                href = f"{BASE_URL}/schedules/eta?stn={stn}"
+                warnings.warn(f"at {stn}? see: {href}")
+        for warning in group:
+            click.secho(str(warning.message), fg="yellow", file=sys.stderr)
 
 
 def _all(*args) -> str:
-    names = list(args if len(args) > 0 else STATIONS.keys())
+    names = list(args if len(args) > 0 else _station_names())
     return ",".join(names)
 
 
 _CLI_DEFAULTS = dict(
-    default_map=dict(
-        {
-            None: dict(
-                is_human=os.getenv("BART_FMT", "text") != "json",
-                stations=os.getenv("BART_END", _all()).split(","),
-            ),
-        }
-    ),
+    default_map={
+        None: dict(
+            is_human=os.getenv("BART_FMT", "text") != "json",
+            stations=os.getenv("BART_END", _all()).split(","),
+        ),
+    },
 )
 
 
 @click.group(chain=False, invoke_without_command=True)
 @click.pass_context
-def cli(ctx):
+def cli(ctx) -> None:
     """Scrapes real-time information re: new BART trains"""
     # stations: http://api.bart.gov/docs/overview/abbrev.aspx
     defaults = _CLI_DEFAULTS.get("default_map", {}).get(None, {})
     is_human = defaults.get("is_human")
     stations = defaults.get("stations")
     if ctx.invoked_subcommand is None:
-        with warnings.catch_warnings(record=True) as group:
-            _dump_named(*stations, human=is_human)
-            for warning in group:
-                click.secho(warning.message, fg="yellow", file=sys.stderr)
+        _dump_named(*stations, human=is_human)  # type: ignore
 
 
 @cli.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument("stations", nargs=-1)
 @click.option("--json", is_flag=True)
-def fof(stations, **options):
-    """find Fleet of the Future (three door) trains"""
+def find(stations, **options) -> None:
+    """locates any Fleet of the Future (three door) trains"""
     _dump_named(*stations, human=not options.get("json"))
 
 
-def main(*args, **kwargs):
+def main(*args, **kwargs) -> None:
     """Invokes Click"""
     cli(*args, **kwargs)
 

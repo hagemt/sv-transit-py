@@ -7,9 +7,12 @@ from modes import bart, caltrain
 
 def main(out=sys.stderr):
     """parent CLI"""
+
+    def usage():
+        print(f"--- USAGE: {exe} bart|ct ...", file=out)
+
     cmd = sys.argv[1] if len(sys.argv) > 1 else None  # will print CLI usage
     exe = sys.argv[0] if not sys.argv[0].endswith("__main__.py") else "modes"
-    usage = lambda: print(f"--- USAGE: {exe} bart|ct ...", file=out)
     if cmd is None:
         cmd = "usage"
     else:
